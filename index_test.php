@@ -8,123 +8,123 @@ require_once('config_1.php');
 <script src="http://code.jquery.com/jquery-2.2.4.js"></script>
 <script>
 (function($) {
-    var destination_user_image = $('.destination_user_image').val();
-    var settings = {};
+        var destination_user_image = $('.destination_user_image').val();
+        var settings = {};
 
-    var methods = {
-        init: function(options) {
-            settings = $.extend({
-                'uri': 'ws://localhost:8080',
-                'conn': null,
-                'message': '#message',
-                'display': '#display'
-            }, options);
-            $(settings['message']).keypress(methods['checkEvent']);
-            $(this).chat('connect');
-        },
+        var methods = {
+            init: function(options) {
+                settings = $.extend({
+                    'uri': 'ws://localhost:8080',
+                    'conn': null,
+                    'message': '#message',
+                    'display': '#display'
+                }, options);
+                $(settings['message']).keypress(methods['checkEvent']);
+                $(this).chat('connect');
+            },
 
-        checkEvent: function(event) {
-            if (event && event.which == 13) {
-                var message = $(settings['message']).val();
-                if (message && settings['conn']) {
-                    settings['conn'].send(message + '');
-                    $(this).chat('drawText', message, 'right');
+            checkEvent: function(event) {
+                if (event && event.which == 13) {
+                    var message = $(settings['message']).val();
+                    if (message && settings['conn']) {
+                        settings['conn'].send(message + '');
+                        $(this).chat('drawText', message, 'right');
+                    }
                 }
-            }
-        },
+            },
 
-        connect: function() {
-            if (settings['conn'] == null) {
-                settings['conn'] = new WebSocket(settings['uri']);
-                settings['conn'].onopen = methods['onOpen'];
-                settings['conn'].onmessage = methods['onMessage'];
-                settings['conn'].onclose = methods['onClose'];
-                settings['conn'].onerror = methods['onError'];
-            }
-        },
-
-        onMessage: function(event) {
-            if (event && event.data) {
-                $(this).chat('drawText', event.data, 'left');
-            }
-        },
-
-        onError: function(event) {
-            $(this).chat('drawText', 'エラー発生!', 'left');
-        },
-
-        drawText: function(message, align = 'left') {
-            var box = $('<p class="box"></p>').text(message);
-            var message_box = $('<p class="box"></p>');
-            var destination_user_image = $('.destination_user_image').val();
-            var message_image = $('.my_preview').attr('src');
-            var newelm = document.createElement('img');
-            newelm.setAttribute('src', message_image);
-            if (align === 'left') {
-                var inner = $('<div class="left"></div>').html(box);
-                if (message_image != null) {
-                    box[0].appendChild(newelm);
+            connect: function() {
+                if (settings['conn'] == null) {
+                    settings['conn'] = new WebSocket(settings['uri']);
+                    settings['conn'].onopen = methods['onOpen'];
+                    settings['conn'].onmessage = methods['onMessage'];
+                    settings['conn'].onclose = methods['onClose'];
+                    settings['conn'].onerror = methods['onError'];
                 }
-                inner.prepend(
-                    "<img src='../user/image/" + destination_user_image + "' class='message_user_img'>");
+            },
+
+            onMessage: function(event) {
+                if (event && event.data) {
+                    $(this).chat('drawText', event.data, 'left');
+                }
+            },
+
+            onError: function(event) {
+                $(this).chat('drawText', 'エラー発生!', 'left');
+            },
+
+            drawText: function(message, align = 'left') {
+                var box = $('<p class="box"></p>').text(message);
+                var message_box = $('<p class="box"></p>');
+                var destination_user_image = $('.destination_user_image').val();
+                var message_image = $('.my_preview').attr('src');
+                var newelm = document.createElement('img');
+                newelm.setAttribute('src', message_image);
+                if (align === 'left') {
+                    var inner = $('<div class="left"></div>').html(box);
+                    if (message_image != null) {
+                        box[0].appendChild(newelm);
+                    }
+                    inner.prepend(
+                        "<img src='../user/image/" + destination_user_image + "' class='message_user_img'>");
+                } else {
+                    var inner = $('<div class="mycomment right"></div>').html(box);
+                    if (message_image != null) {
+                        box[0].appendChild(newelm);
+                    }
+                    inner.append(
+                        "<img src='../user/image/<?= $current_user['image'] ?>' class='message_user_img'>");
+                }
+                $('#chat').append(inner);
+                $('.my_preview').attr('src', null);
+            },
+        };
+
+        $.fn.chat = function(method) {
+            if (methods[method]) {
+                return methods[method].apply(this, Array.prototype.slice.call(arguments, 1));
+            } else if (typeof method === 'object' || !method) {
+                return methods.init.apply(this, arguments);
             } else {
-                var inner = $('<div class="mycomment right"></div>').html(box);
-                if (message_image != null) {
-                    box[0].appendChild(newelm);
-                }
-                inner.append(
-                    "<img src='../user/image/<?= $current_user['image'] ?>' class='message_user_img'>");
+                $.error('Method ' + method + ' does not exist');
             }
-            $('#chat').append(inner);
-            $('.my_preview').attr('src', null);
-        },
-    };
-
-    $.fn.chat = function(method) {
-        if (methods[method]) {
-            return methods[method].apply(this, Array.prototype.slice.call(arguments, 1));
-        } else if (typeof method === 'object' || !method) {
-            return methods.init.apply(this, arguments);
-        } else {
-            $.error('Method ' + method + ' does not exist');
         }
-    }
 
-    $(document).keypress(function(e) {
-        e.stopPropagation();
-        if (e.which == 13) {
-            var message = document.getElementById("message").value,
-                destination_user_id = document.getElementById("destination_user_id").value;
-            var formdata = new FormData();
-            var formdata = new FormData(document.getElementById('image'));
-            formdata.append('message', message);
-            formdata.append('destination_user_id', destination_user_id);
-            $.ajax({
-                type: 'POST',
-                url: 'message/ajax_post_message.php',
-                dataType: 'html',
-                data: formdata,
-                cache: false,
-                processData: false,
-                contentType: false
-            }).done(function(data) {
-                document.getElementById("message").value = '';
-                $('.far.fa-times-circle.my_clear').hide();
-                $('.my_preview').hide();
-                $('#my_image').val('');
-            }).fail(function(data) {});
-        }
+        $(document).keypress(function(e) {
+                e.stopPropagation();
+                if (e.which == 13) {
+                    var message = document.getElementById("message").value,
+                        destination_user_id = document.getElementById("destination_user_id").value;
+                    var formdata = new FormData();
+                    var formdata = new FormData(document.getElementById('image'));
+                    formdata.append('message', message);
+                    formdata.append('destination_user_id', destination_user_id);
+                    $.ajax({
+                        type: 'POST',
+                        url: 'message/ajax_post_message.php',
+                        dataType: 'html',
+                        data: formdata,
+                        cache: false,
+                        processData: false,
+                        contentType: false
+                    }).done(function(data) {
+                        document.getElementById("message").value = '';
+                        $('.far.fa-times-circle.my_clear').hide();
+                        $('.my_preview').hide();
+                        $('#my_image').val('');
+                    }).fail(function(data) {});
+
+                });
+
+        })(jQuery);
+
+    $(function() {
+        $(this).chat({
+            'uri': 'ws://localhost:8080',
+            'message': '#message',
+            'display': '#chat'
+        });
     });
-
-})(jQuery);
-
-$(function() {
-    $(this).chat({
-        'uri': 'ws://localhost:8080',
-        'message': '#message',
-        'display': '#chat'
-    });
-});
 </script>
 </head>
 
